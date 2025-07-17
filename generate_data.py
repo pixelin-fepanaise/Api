@@ -7,8 +7,9 @@ fake = Faker()
 
 # Configuration
 NUM_COMMUNITIES = 20
-USERS_PER_COMMUNITY = 100
 RELATIONSHIPS_PER_COMMUNITY = 50
+MIN_USERS = 60
+MAX_USERS = 100  # 👈 Max users per community is now capped at 100
 
 def generate_community_id(index):
     return int(f"999999999999{index:04}")
@@ -31,28 +32,39 @@ communities_data = {}
 relationships_data = {}
 user_ids_by_community = {}
 
+global_user_id = 4001000000
+
 for c in range(NUM_COMMUNITIES):
     community_id = generate_community_id(c)
+    community_size = random.randint(MIN_USERS, MAX_USERS)  # 👈 Random between 60–100
     users = []
     user_ids = []
-    for u in range(USERS_PER_COMMUNITY):
-        user_id = 4001000000 + c * 1000 + u
+
+    for _ in range(community_size):
+        user_id = global_user_id
+        global_user_id += 1
         users.append(generate_user_node(community_id, user_id))
         user_ids.append(str(user_id))
+
     nodes_data[str(community_id)] = {"nodes": users}
     communities_data[str(community_id)] = {
-        "size": USERS_PER_COMMUNITY,
+        "size": community_size,
         "community": community_id
     }
     user_ids_by_community[community_id] = user_ids
 
 for community_id, user_ids in user_ids_by_community.items():
     links = []
-    for _ in range(RELATIONSHIPS_PER_COMMUNITY):
+    max_possible_links = len(user_ids) * (len(user_ids) - 1) // 2
+    actual_links = min(RELATIONSHIPS_PER_COMMUNITY, max_possible_links)
+
+    for _ in range(actual_links):
         from_user, to_user = random.sample(user_ids, 2)
         links.append({"from": from_user, "to": to_user})
+
     relationships_data[str(community_id)] = {str(community_id): links}
 
+# Save files
 with open("nodes.json", "w") as f:
     json.dump(nodes_data, f, indent=2)
 
